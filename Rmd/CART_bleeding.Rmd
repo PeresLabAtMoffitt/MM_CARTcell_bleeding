@@ -1,0 +1,383 @@
+---
+title: "CART_bleeding analysis"
+author: "Christelle Colin-Leitzinger"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_collapsed: no
+    theme: united
+    highlight: pygments
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+<style type="text/css">
+h1.title {
+  font-size: 25px;
+}
+.figure {
+   margin-top: 25px;
+   margin-bottom: 25px;
+}
+
+table {
+    margin-top: 25px;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE,
+                      fig.align='center'
+                      )
+```
+
+
+<style>
+div.blue { background-color:#0099CC; border-radius: 5px; padding: 20px; font-size: 38px}
+</style>
+<div class = "blue">
+
+<span style="color: white;">CART_bleeding analysis</span>
+
+</div>
+<br>
+
+```{r library, include=FALSE}
+library(tidyverse)
+library(gtsummary)
+theme_gtsummary_compact()
+theme_set(theme_classic())
+```
+
+```{r load}
+cart_MM <-
+  readxl::read_xlsx(
+    "turabData Cleaning v11 11.16.2022.xlsx",
+                    # skip = 1, n_max = 198,
+    sheet = "Data - Original"
+                    ) %>% 
+  janitor::clean_names()
+
+summary(MM_cart)
+```
+
+```{r}
+recoded_cart <- cart_MM %>% 
+  # Recoding
+  mutate(sex = case_when(
+    sex == 0             ~ "Male",
+    sex == 1             ~ "Female"
+  )) %>% 
+  mutate(race = case_when(
+    race == 1             ~ "NHW",
+    race == 2             ~ "NHB",
+    race == 3             ~ "Hipanic",
+    race == 4             ~ "Asian",
+    race == 5             ~ "Others"
+  )) %>% 
+  mutate(car_t_product = case_when(
+    car_t_product == 1             ~ "Abecma",
+    car_t_product == 2             ~ "cilta-cel"
+  )) %>% 
+  mutate(ecog_at_screening = case_when(
+    race == 1             ~ "NHW",
+    race == 2             ~ "NHB",
+    race == 3             ~ "Hipanic",
+    race == 4             ~ "Asian",
+    race == 5             ~ "Others"
+  )) %>% 
+  mutate(myeloma_sub_type = case_when(
+    myeloma_sub_type == 1             ~ "IgG",
+    myeloma_sub_type == 2             ~ "IgA",
+    myeloma_sub_type == 3             ~ "IgD",
+    myeloma_sub_type == 4             ~ "IgM",
+    myeloma_sub_type == 5             ~ "lc"
+  )) %>% 
+  mutate(light_chain_subtype = case_when(
+    light_chain_subtype == 1             ~ "kappa",
+    light_chain_subtype == 0             ~ "lambda"
+  )) %>% 
+  mutate(deletion_17p_prior_to_car_t_infusion_1_0 = case_when(
+    deletion_17p_prior_to_car_t_infusion_1_0 == 1             ~ "Yes",
+    deletion_17p_prior_to_car_t_infusion_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(t_4_14_prior_to_car_t_infusion_1_0 = case_when(
+    t_4_14_prior_to_car_t_infusion_1_0 == 1             ~ "Yes",
+    t_4_14_prior_to_car_t_infusion_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(t_14_16_prior_to_car_t_infusion_1_0 = case_when(
+    t_14_16_prior_to_car_t_infusion_1_0 == 1             ~ "Yes",
+    t_14_16_prior_to_car_t_infusion_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(r_iss_at_car_t_infsion = case_when(
+    r_iss_at_car_t_infsion == 1             ~ "I",
+    r_iss_at_car_t_infsion == 2             ~ "II",
+    r_iss_at_car_t_infsion == 3             ~ "III"
+  )) %>%
+  mutate(prior_auto_sct_1_0 = case_when(
+    prior_auto_sct_1_0 == 1             ~ "Yes",
+    prior_auto_sct_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(amyloid_1_0 = case_when(
+    amyloid_1_0 == 1             ~ "Yes",
+    amyloid_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(plasma_cell_leukemia_1_0 = case_when(
+    plasma_cell_leukemia_1_0 == 1             ~ "Yes",
+    plasma_cell_leukemia_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(extramedullary_disease_1_0 = case_when(
+    extramedullary_disease_1_0 == 1             ~ "Yes",
+    extramedullary_disease_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(disease_status_at_time_of_referral = case_when(
+    disease_status_at_time_of_referral == 1             ~ "Refractory/RELAPSED",
+    disease_status_at_time_of_referral == 2             ~ "SD",
+    disease_status_at_time_of_referral == 3             ~ "PR"
+  )) %>%
+  mutate(history_of_bleeding_y_n = case_when(
+    history_of_bleeding_y_n == 1             ~ "Yes",
+    history_of_bleeding_y_n == 0             ~ "No"
+  )) %>% 
+  mutate(bleeding_event_type = case_when(
+    bleeding_event_type == 1             ~ "gross hematuria",
+    bleeding_event_type == 2             ~ "SDH",
+    bleeding_event_type == 3             ~ "SSI",
+    bleeding_event_type == 4             ~ "MSK bleed",
+    bleeding_event_type == 5             ~ "GI bleed",
+    bleeding_event_type == 6             ~ "Hemptysis"
+  )) %>%
+  mutate(history_of_clotting_y_n = case_when(
+    history_of_clotting_y_n == 1             ~ "Yes",
+    history_of_clotting_y_n == 0             ~ "No"
+  )) %>% 
+  mutate(clotting_event_type = case_when(
+    clotting_event_type == 1             ~ "DVT",
+    clotting_event_type == 2             ~ "line asso. DVT",
+    clotting_event_type == 3             ~ "Thrombotic stroke",
+    clotting_event_type == 4             ~ "Portal vein thrombosis",
+    clotting_event_type == 5             ~ "Spl. V thrombosis",
+    clotting_event_type == 6             ~ "sigmoid sinus thrombus"
+  )) %>%
+  mutate(neurological_comorbidit_y_pre_car_t_1_0 = case_when(
+    neurological_comorbidit_y_pre_car_t_1_0 == 1             ~ "Yes",
+    neurological_comorbidit_y_pre_car_t_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(vascular_comorbidity_dvt_stroke_ht0_cad_y_0 = case_when(
+    vascular_comorbidity_dvt_stroke_ht0_cad_y_0 == 1             ~ "Yes",
+    vascular_comorbidity_dvt_stroke_ht0_cad_y_0 == 0             ~ "No"
+  )) %>% 
+  mutate(anticoagulation_preceding_car_t_y_n = case_when(
+    anticoagulation_preceding_car_t_y_n == 1             ~ "Yes",
+    anticoagulation_preceding_car_t_y_n == 0             ~ "No"
+  )) %>% 
+  mutate(event_resulting_in_cessation_of_ac_therapy_y_n = case_when(
+    event_resulting_in_cessation_of_ac_therapy_y_n == 1             ~ "Yes",
+    event_resulting_in_cessation_of_ac_therapy_y_n == 0             ~ "No"
+  )) %>% 
+  mutate(bridging_therapy_1_0 = case_when(
+    bridging_therapy_1_0 == 1             ~ "Yes",
+    bridging_therapy_1_0 == 0             ~ "No"
+  )) %>% 
+  mutate(bleeding_events_during_or_post_cart_y_n = case_when(
+    bleeding_events_during_or_post_cart_y_n == 1             ~ "Yes",
+    bleeding_events_during_or_post_cart_y_n == 0             ~ "No"
+  )) %>% 
+  mutate(bleeding_y_n = case_when(
+    bleeding_y_n == 1             ~ "Yes",
+    bleeding_y_n == 0             ~ "No"
+  )) %>% 
+  mutate(who_grade_of_bleeding_259 = case_when(
+    who_grade_of_bleeding_259 == 1             ~ "Petechia, purpura, oropharyngeal bleed, epistaxis <1 hr, vaginal bleed <2 pads/dat",
+    who_grade_of_bleeding_259 == 2             ~ "Echymosis >10 cms, Hematoma, retinal hemorrhage without vision impairment,hematuria, hemotysis,melena, joint bleed",
+    who_grade_of_bleeding_259 == 3             ~ "bleeding req. BT, bleeding with mod hD unstability",
+    who_grade_of_bleeding_259 == 4             ~ "severe HD unstability, fata bleeding, CNS bleeding"
+  )) %>% 
+  mutate(isth_dic_score_5_y_n_at_time_of_event = case_when(
+    isth_dic_score_5_y_n_at_time_of_event == 1             ~ "Yes",
+    isth_dic_score_5_y_n_at_time_of_event == 0             ~ "No"
+  )) %>% 
+  mutate(exposure_to_direct_hepatotoxic_drugs_y_n_276 = case_when(
+    exposure_to_direct_hepatotoxic_drugs_y_n_276 == 1             ~ "Yes",
+    exposure_to_direct_hepatotoxic_drugs_y_n_276 == 2             ~ "No"
+  )) %>% 
+  mutate(treatment_for_bleeding_event_y_n_277 = case_when(
+    treatment_for_bleeding_event_y_n_277 == 1             ~ "Yes",
+    treatment_for_bleeding_event_y_n_277 == 2             ~ "No"
+  )) %>% 
+  mutate(ffp_transfusion_y_n_278 = case_when(
+    ffp_transfusion_y_n_278 == 1             ~ "Yes",
+    ffp_transfusion_y_n_278 == 2             ~ "No"
+  )) %>% 
+  mutate(platelet_transfusion_y_n_280 = case_when(
+    platelet_transfusion_y_n_280 == 1             ~ "Yes",
+    platelet_transfusion_y_n_280 == 2             ~ "No"
+  )) %>% 
+  mutate(cryoprecipitate_transfusion_y_n_282 = case_when(
+    cryoprecipitate_transfusion_y_n_282 == 1             ~ "Yes",
+    cryoprecipitate_transfusion_y_n_282 == 2             ~ "No"
+  )) %>% 
+  mutate(another_site_of_bleeding_if_any = case_when( ############################ Green
+    another_site_of_bleeding_if_any == 1             ~ "Yes",
+    another_site_of_bleeding_if_any == 2             ~ "No"
+  )) %>% 
+  
+  
+  
+  
+  
+  mutate(x3rd_site_of_bleed_y_n = case_when( ################################ PINK
+    x3rd_site_of_bleed_y_n == 1             ~ "Yes",
+    x3rd_site_of_bleed_y_n == 2             ~ "No"
+  )) %>% 
+  mutate(treatment_for_thrombosis_y_n_365 = case_when( ######################### ORANGE
+    treatment_for_thrombosis_y_n_365 == 1             ~ "Yes",
+    treatment_for_thrombosis_y_n_365 == 0             ~ "No"
+  )) %>% 
+  mutate(tocilizumab_yes_no = case_when(
+    tocilizumab_yes_no == 1             ~ "Yes",
+    tocilizumab_yes_no == 2             ~ "No"
+  )) %>% 
+  mutate(steroid_use_yes_no = case_when(
+    steroid_use_yes_no == 1             ~ "Yes",
+    steroid_use_yes_no == 2             ~ "No"
+  )) %>% 
+  mutate(anakinra_yes_no = case_when(
+    anakinra_yes_no == 1             ~ "Yes",
+    anakinra_yes_no == 2             ~ "No"
+  )) %>% 
+  mutate(any_other_crs_icans_therapy_y_n = case_when(
+    any_other_crs_icans_therapy_y_n == 1             ~ "Yes",
+    any_other_crs_icans_therapy_y_n == 2             ~ "No"
+  )) %>% 
+  
+  mutate(pod_y_n = case_when(
+    pod_y_n == 1             ~ "Yes",
+    pod_y_n == 2             ~ "No"
+  )) %>% 
+  mutate(death_from_clotting_or_bleeding_with_in_90_days_of_car_t = case_when(
+    death_from_clotting_or_bleeding_with_in_90_days_of_car_t == 1             ~ "Yes",
+    death_from_clotting_or_bleeding_with_in_90_days_of_car_t == 2             ~ "No"
+  )) %>%
+  # New variable
+  # cytogenetics
+  mutate(any_cytogenetics = case_when(
+    deletion_17p_prior_to_car_t_infusion_1_0 == "YES" | 
+      t_4_14_prior_to_car_t_infusion_1_0 == "YES" | 
+      t_14_16_prior_to_car_t_infusion_1_0 == "YES"   ~ "YES",
+    deletion_17p_prior_to_car_t_infusion_1_0 == "NO" &
+      t_4_14_prior_to_car_t_infusion_1_0 == "NO" &
+      t_14_16_prior_to_car_t_infusion_1_0 == "NO"    ~ "NO"
+  ))
+  # mutate(cause = case_when(
+  #   c == 1             ~ "Yes",
+  #   c == 2             ~ "No"
+  # )) %>% 
+  # # Remove the < and > sign
+  # mutate_at(c("", ""), 
+  #           ~ case_when(
+  #   str_detect(., "<")                 ~ 0.05,
+  #   TRUE                               ~ as.numeric(.)
+  # )) %>% 
+  # mutate_at(c("", ""), 
+  #           ~ case_when(
+  #   str_detect(., "<")                 ~ 0.05,
+  #   TRUE                               ~ as.numeric(.)
+  # ))
+
+```
+
+# Table 1. summarizing the baseline characteristics of the patients reviewed in the study
+```{r}
+recoded_cart %>% 
+  select(
+    age, sex,
+    platelet_at_time_of_bleeding_event,
+    ecog_at_screening,
+    r_iss_at_car_t_infsion,
+    extramedullary_disease_1_0,
+    any_cytogenetics,
+    bridging_therapy_1_0,
+    prior_auto_sct_1_0,
+    refractory_disease_status,
+    ldh_at_pre_leukapheresis,
+    b2_m_at_pre_leukapheresis,
+    marrow_dysplasia_baseline_percent,
+    highest_gr_crs_grade_0_5, 
+    highest_gr_icans_recorded_relative_to_infusion,
+    
+    orr_response_at_d_30, orr_response_at_d_90,
+    history_of_bleeding_y_n,
+    history_of_clotting_y_n,
+    neurological_comorbidit_y_pre_car_t_1_0,
+    vascular_comorbidity_dvt_stroke_ht0_cad_y_0,
+    anticoagulation_preceding_car_t_y_n,
+    bleeding_y_n
+  ) %>% 
+  tbl_summary(by= bleeding_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
+
+recoded_cart %>% 
+  select(
+    age, sex,
+    platelet_at_time_of_bleeding_event,
+    ecog_at_screening,
+    r_iss_at_car_t_infsion,
+    extramedullary_disease_1_0,
+    any_cytogenetics,
+    bridging_therapy_1_0,
+    prior_auto_sct_1_0,
+    refractory_disease_status,
+    ldh_at_pre_leukapheresis,
+    b2_m_at_pre_leukapheresis,
+    marrow_dysplasia_baseline_percent,
+    highest_gr_crs_grade_0_5, 
+    highest_gr_icans_recorded_relative_to_infusion,
+    
+    orr_response_at_d_30, orr_response_at_d_90,
+    history_of_bleeding_y_n,
+    history_of_clotting_y_n,
+    neurological_comorbidit_y_pre_car_t_1_0,
+    vascular_comorbidity_dvt_stroke_ht0_cad_y_0,
+    anticoagulation_preceding_car_t_y_n,
+    thrombosis_events_post_car_t_y_n
+  ) %>% 
+  tbl_summary(by= thrombosis_events_post_car_t_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Thrombosis event**")
+```
+
+# Table 2: Types and grades of major CAR-T related toxicities documented among study participants 
+
+
+# Table 3. showing laboratory findings of patients who received CAR-T cell therapy with frequency of abnormal lab values, and median nadir or peak values as listed in patients with bleeding and thrombosis.
+
+
+# Figures: 
+## 1.	Cumulative incidence
+
+## Figure 2.
+
+
+
+
+
+
+
+
