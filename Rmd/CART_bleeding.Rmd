@@ -39,11 +39,11 @@ knitr::opts_chunk$set(echo = FALSE,
 
 
 <style>
-div.blue { background-color:#0099CC; border-radius: 5px; padding: 20px; font-size: 38px}
+div.blue { background-color:#FF6600; border-radius: 5px; padding: 20px; font-size: 38px}
 </style>
 <div class = "blue">
 
-<span style="color: white;">CART_bleeding analysis</span>
+<span style="color: white;">CAR-T cell and bleeding analysis</span>
 
 </div>
 <br>
@@ -57,14 +57,11 @@ theme_set(theme_classic())
 
 ```{r load}
 cart_MM <-
-  readxl::read_xlsx(
-    "turabData Cleaning v11 11.16.2022.xlsx",
-                    # skip = 1, n_max = 198,
+  readxl::read_xlsx(here::here(
+    "turabData Cleaning v12 11.16.2022.xlsx"),
     sheet = "Data - Original"
                     ) %>% 
   janitor::clean_names()
-
-summary(MM_cart)
 ```
 
 ```{r}
@@ -84,13 +81,6 @@ recoded_cart <- cart_MM %>%
   mutate(car_t_product = case_when(
     car_t_product == 1             ~ "Abecma",
     car_t_product == 2             ~ "cilta-cel"
-  )) %>% 
-  mutate(ecog_at_screening = case_when(
-    race == 1             ~ "NHW",
-    race == 2             ~ "NHB",
-    race == 3             ~ "Hipanic",
-    race == 4             ~ "Asian",
-    race == 5             ~ "Others"
   )) %>% 
   mutate(myeloma_sub_type = case_when(
     myeloma_sub_type == 1             ~ "IgG",
@@ -193,36 +183,36 @@ recoded_cart <- cart_MM %>%
     bleeding_y_n == 1             ~ "Yes",
     bleeding_y_n == 0             ~ "No"
   )) %>% 
-  mutate(who_grade_of_bleeding_259 = case_when(
-    who_grade_of_bleeding_259 == 1             ~ "Petechia, purpura, oropharyngeal bleed, epistaxis <1 hr, vaginal bleed <2 pads/dat",
-    who_grade_of_bleeding_259 == 2             ~ "Echymosis >10 cms, Hematoma, retinal hemorrhage without vision impairment,hematuria, hemotysis,melena, joint bleed",
-    who_grade_of_bleeding_259 == 3             ~ "bleeding req. BT, bleeding with mod hD unstability",
-    who_grade_of_bleeding_259 == 4             ~ "severe HD unstability, fata bleeding, CNS bleeding"
-  )) %>% 
-  mutate(isth_dic_score_5_y_n_at_time_of_event = case_when(
-    isth_dic_score_5_y_n_at_time_of_event == 1             ~ "Yes",
-    isth_dic_score_5_y_n_at_time_of_event == 0             ~ "No"
-  )) %>% 
-  mutate(exposure_to_direct_hepatotoxic_drugs_y_n_276 = case_when(
-    exposure_to_direct_hepatotoxic_drugs_y_n_276 == 1             ~ "Yes",
-    exposure_to_direct_hepatotoxic_drugs_y_n_276 == 2             ~ "No"
-  )) %>% 
-  mutate(treatment_for_bleeding_event_y_n_277 = case_when(
-    treatment_for_bleeding_event_y_n_277 == 1             ~ "Yes",
-    treatment_for_bleeding_event_y_n_277 == 2             ~ "No"
-  )) %>% 
-  mutate(ffp_transfusion_y_n_278 = case_when(
-    ffp_transfusion_y_n_278 == 1             ~ "Yes",
-    ffp_transfusion_y_n_278 == 2             ~ "No"
-  )) %>% 
-  mutate(platelet_transfusion_y_n_280 = case_when(
-    platelet_transfusion_y_n_280 == 1             ~ "Yes",
-    platelet_transfusion_y_n_280 == 2             ~ "No"
-  )) %>% 
-  mutate(cryoprecipitate_transfusion_y_n_282 = case_when(
-    cryoprecipitate_transfusion_y_n_282 == 1             ~ "Yes",
-    cryoprecipitate_transfusion_y_n_282 == 2             ~ "No"
-  )) %>% 
+  # mutate(who_grade_of_bleeding_259 = case_when(
+  #   who_grade_of_bleeding_259 == 1             ~ "Petechia, purpura, oropharyngeal bleed, epistaxis <1 hr, vaginal bleed <2 pads/dat",
+  #   who_grade_of_bleeding_259 == 2             ~ "Echymosis >10 cms, Hematoma, retinal hemorrhage without vision impairment,hematuria, hemotysis,melena, joint bleed",
+  #   who_grade_of_bleeding_259 == 3             ~ "bleeding req. BT, bleeding with mod hD unstability",
+  #   who_grade_of_bleeding_259 == 4             ~ "severe HD unstability, fata bleeding, CNS bleeding"
+  # )) %>% 
+  # mutate(isth_dic_score_5_y_n_at_time_of_event = case_when(
+  #   isth_dic_score_5_y_n_at_time_of_event == 1             ~ "Yes",
+  #   isth_dic_score_5_y_n_at_time_of_event == 0             ~ "No"
+  # )) %>% 
+  # mutate(exposure_to_direct_hepatotoxic_drugs_y_n_276 = case_when(
+  #   exposure_to_direct_hepatotoxic_drugs_y_n_276 == 1             ~ "Yes",
+  #   exposure_to_direct_hepatotoxic_drugs_y_n_276 == 2             ~ "No"
+  # )) %>% 
+  # mutate(treatment_for_bleeding_event_y_n_277 = case_when(
+  #   treatment_for_bleeding_event_y_n_277 == 1             ~ "Yes",
+  #   treatment_for_bleeding_event_y_n_277 == 2             ~ "No"
+  # )) %>% 
+  # mutate(ffp_transfusion_y_n_278 = case_when(
+  #   ffp_transfusion_y_n_278 == 1             ~ "Yes",
+  #   ffp_transfusion_y_n_278 == 2             ~ "No"
+  # )) %>% 
+  # mutate(platelet_transfusion_y_n_280 = case_when(
+  #   platelet_transfusion_y_n_280 == 1             ~ "Yes",
+  #   platelet_transfusion_y_n_280 == 2             ~ "No"
+  # )) %>% 
+  # mutate(cryoprecipitate_transfusion_y_n_282 = case_when(
+  #   cryoprecipitate_transfusion_y_n_282 == 1             ~ "Yes",
+  #   cryoprecipitate_transfusion_y_n_282 == 2             ~ "No"
+  # )) %>% 
   mutate(another_site_of_bleeding_if_any = case_when( ############################ Green
     another_site_of_bleeding_if_any == 1             ~ "Yes",
     another_site_of_bleeding_if_any == 2             ~ "No"
@@ -236,10 +226,10 @@ recoded_cart <- cart_MM %>%
     x3rd_site_of_bleed_y_n == 1             ~ "Yes",
     x3rd_site_of_bleed_y_n == 2             ~ "No"
   )) %>% 
-  mutate(treatment_for_thrombosis_y_n_365 = case_when( ######################### ORANGE
-    treatment_for_thrombosis_y_n_365 == 1             ~ "Yes",
-    treatment_for_thrombosis_y_n_365 == 0             ~ "No"
-  )) %>% 
+  # mutate(treatment_for_thrombosis_y_n_365 = case_when( ######################### ORANGE
+  #   treatment_for_thrombosis_y_n_365 == 1             ~ "Yes",
+  #   treatment_for_thrombosis_y_n_365 == 0             ~ "No"
+  # )) %>% 
   mutate(tocilizumab_yes_no = case_when(
     tocilizumab_yes_no == 1             ~ "Yes",
     tocilizumab_yes_no == 2             ~ "No"
@@ -268,28 +258,78 @@ recoded_cart <- cart_MM %>%
   # New variable
   # cytogenetics
   mutate(any_cytogenetics = case_when(
-    deletion_17p_prior_to_car_t_infusion_1_0 == "YES" | 
-      t_4_14_prior_to_car_t_infusion_1_0 == "YES" | 
-      t_14_16_prior_to_car_t_infusion_1_0 == "YES"   ~ "YES",
-    deletion_17p_prior_to_car_t_infusion_1_0 == "NO" &
-      t_4_14_prior_to_car_t_infusion_1_0 == "NO" &
-      t_14_16_prior_to_car_t_infusion_1_0 == "NO"    ~ "NO"
-  ))
-  # mutate(cause = case_when(
-  #   c == 1             ~ "Yes",
-  #   c == 2             ~ "No"
-  # )) %>% 
-  # # Remove the < and > sign
-  # mutate_at(c("", ""), 
-  #           ~ case_when(
-  #   str_detect(., "<")                 ~ 0.05,
-  #   TRUE                               ~ as.numeric(.)
-  # )) %>% 
-  # mutate_at(c("", ""), 
-  #           ~ case_when(
-  #   str_detect(., "<")                 ~ 0.05,
-  #   TRUE                               ~ as.numeric(.)
-  # ))
+    deletion_17p_prior_to_car_t_infusion_1_0 == "Yes" | 
+      t_4_14_prior_to_car_t_infusion_1_0 == "Yes" | 
+      t_14_16_prior_to_car_t_infusion_1_0 == "Yes"   ~ "Yes",
+    deletion_17p_prior_to_car_t_infusion_1_0 == "No" &
+      t_4_14_prior_to_car_t_infusion_1_0 == "No" &
+      t_14_16_prior_to_car_t_infusion_1_0 == "No"    ~ "No"
+  )) %>% 
+  mutate(any_CRS = case_when(
+    highest_gr_crs_grade_0_5 > 0       ~ "Yes",
+    TRUE                               ~ "No"
+  )) %>% 
+  mutate(any_ICANS = case_when(
+    highest_gr_icans_recorded_relative_to_infusion > 0       ~ "Yes",
+    TRUE                                                     ~ "No"
+  )) %>% 
+  mutate(CRS_cat = case_when(
+    highest_gr_crs_grade_0_5 == 0 |
+      highest_gr_crs_grade_0_5 == 1              ~ "0-1",
+    highest_gr_crs_grade_0_5 >= 2                ~ "≥2"
+  )) %>% 
+  mutate(ICANS_cat = case_when(
+    highest_gr_icans_recorded_relative_to_infusion == 0 |
+      highest_gr_icans_recorded_relative_to_infusion == 1              ~ "0-1",
+    highest_gr_crs_grade_0_5 >= 2                                      ~ "≥2"
+  )) %>% 
+
+  # Remove the < and > sign
+  mutate(wo_sign = as.numeric(str_remove(ferritin_day_7, ">"))) %>% 
+  mutate(ferritin_day_7 = case_when(
+    str_detect(ferritin_day_7, ">")                 ~ max(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(ferritin_day_7)
+    )) %>% 
+  
+  mutate(wo_sign = as.numeric(str_remove(crp_pre_leukapheresis, "<"))) %>% 
+  mutate(crp_pre_leukapheresis = case_when(
+    str_detect(crp_pre_leukapheresis, "<")          ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_pre_leukapheresis) ####### coalesce
+    )) %>% 
+  mutate(wo_sign = as.numeric(str_remove(crp_day_10, "<"))) %>% 
+  mutate(crp_day_10 = case_when(
+    str_detect(crp_day_10, "<")                 ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_day_10)
+    )) %>% 
+  mutate(wo_sign = as.numeric(str_remove(crp_day_14, "<"))) %>% 
+  mutate(crp_day_14 = case_when(
+    str_detect(crp_day_14, "<")                 ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_day_14)
+    )) %>% 
+  mutate(wo_sign = as.numeric(str_remove(crp_day_21, "<"))) %>% 
+  mutate(crp_day_21 = case_when(
+    str_detect(crp_day_21, "<")                 ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_day_21)
+    )) %>% 
+  mutate(wo_sign = as.numeric(str_remove(crp_day_30, "<"))) %>% 
+  mutate(crp_day_30 = case_when(
+    str_detect(crp_day_30, "<")                 ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_day_30)
+    )) %>% 
+  mutate(wo_sign = as.numeric(str_remove(crp_day_60, "<"))) %>% 
+  mutate(crp_day_60 = case_when(
+    str_detect(crp_day_60, "<")                 ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_day_60)
+    )) %>% 
+  mutate(wo_sign = as.numeric(str_remove(crp_day_90, "<"))) %>% 
+  mutate(crp_day_90 = case_when(
+    str_detect(crp_day_90, "<")                 ~ min(wo_sign, na.rm = TRUE),
+    TRUE                                            ~ as.numeric(crp_day_90)
+    )) %>% 
+  # mutate(across(.cols = c(starts_with("ldh_day")), ~na_if(., ".")))
+  mutate(across(c("ferritin_day_14",
+                  starts_with("ldh_day")), ~as.numeric(.)))
+
 
 ```
 
@@ -298,7 +338,7 @@ recoded_cart <- cart_MM %>%
 recoded_cart %>% 
   select(
     age, sex,
-    platelet_at_time_of_bleeding_event,
+    platelet_at_time_of_bleeding_event_1,
     ecog_at_screening,
     r_iss_at_car_t_infsion,
     extramedullary_disease_1_0,
@@ -309,8 +349,8 @@ recoded_cart %>%
     ldh_at_pre_leukapheresis,
     b2_m_at_pre_leukapheresis,
     marrow_dysplasia_baseline_percent,
-    highest_gr_crs_grade_0_5, 
-    highest_gr_icans_recorded_relative_to_infusion,
+    any_CRS, 
+    any_ICANS,
     
     orr_response_at_d_30, orr_response_at_d_90,
     history_of_bleeding_y_n,
@@ -321,6 +361,15 @@ recoded_cart %>%
     bleeding_y_n
   ) %>% 
   tbl_summary(by= bleeding_y_n,
+              type = list(c(extramedullary_disease_1_0,
+                            any_cytogenetics, bridging_therapy_1_0,
+                            prior_auto_sct_1_0,
+                            orr_response_at_d_30, orr_response_at_d_90,
+                            history_of_bleeding_y_n, history_of_clotting_y_n,
+                            neurological_comorbidit_y_pre_car_t_1_0,
+                            vascular_comorbidity_dvt_stroke_ht0_cad_y_0,
+                            anticoagulation_preceding_car_t_y_n)
+                          ~ "categorical"),
               statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
               digits = all_continuous() ~ 1) %>% 
   bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
@@ -332,7 +381,7 @@ recoded_cart %>%
 recoded_cart %>% 
   select(
     age, sex,
-    platelet_at_time_of_bleeding_event,
+    platelet_at_time_of_bleeding_event_1,
     ecog_at_screening,
     r_iss_at_car_t_infsion,
     extramedullary_disease_1_0,
@@ -343,8 +392,8 @@ recoded_cart %>%
     ldh_at_pre_leukapheresis,
     b2_m_at_pre_leukapheresis,
     marrow_dysplasia_baseline_percent,
-    highest_gr_crs_grade_0_5, 
-    highest_gr_icans_recorded_relative_to_infusion,
+    any_CRS, 
+    any_ICANS,
     
     orr_response_at_d_30, orr_response_at_d_90,
     history_of_bleeding_y_n,
@@ -364,15 +413,116 @@ recoded_cart %>%
 ```
 
 # Table 2: Types and grades of major CAR-T related toxicities documented among study participants 
+```{r}
+recoded_cart %>% 
+  select(
+    highest_gr_crs_grade_0_5, 
+    highest_gr_icans_recorded_relative_to_infusion,
+    CRS_cat, ICANS_cat,
+    bleeding_y_n
+  ) %>% 
+  tbl_summary(by= bleeding_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
+
+recoded_cart %>% 
+  select(
+    highest_gr_crs_grade_0_5, 
+    highest_gr_icans_recorded_relative_to_infusion,
+    CRS_cat, ICANS_cat,
+    thrombosis_events_post_car_t_y_n
+  ) %>% 
+  tbl_summary(by= thrombosis_events_post_car_t_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Thrombosis event**")
+```
 
 
 # Table 3. showing laboratory findings of patients who received CAR-T cell therapy with frequency of abnormal lab values, and median nadir or peak values as listed in patients with bleeding and thrombosis.
+```{r}
+recoded_cart %>% 
+  select(
+    lower_platelet_nadir_x_1000_u_l,
+    ferritin_at_pre_leukapheresis,
+    ferritin_peak_ng_ml,
+    crp_pre_leukapheresis,
+    crp_peak_ng_ml,
+    
+    bleeding_y_n
+  ) %>% 
+  tbl_summary(by= bleeding_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
+```
 
 
 # Figures: 
 ## 1.	Cumulative incidence
 
 ## Figure 2.
+```{r}
+# LDH <- 
+  recoded_cart %>% 
+  select(pt, bleeding_y_n,
+         plt_apheresis, starts_with("plt_day"),
+         starts_with("mono"), 
+         ferritin_at_pre_leukapheresis, starts_with("ferritin_day"), 
+         crp_pre_leukapheresis, starts_with("crp_day"), 
+         ldh_at_pre_leukapheresis, starts_with("ldh_day"), 
+         aptt_pretreatment,
+         starts_with("ptt_s_day"), 
+         pt_pretreatment, pt_s_day_0, starts_with("pt_day"), 
+         inr_pretreatment
+         ) %>% 
+  pivot_longer(cols = -c(pt, bleeding_y_n)) %>% 
+  mutate(name = str_remove(name, "_k_ul|_k_u_l"),
+         day = case_when(
+           str_detect(name, "apheresis")         ~ -28,
+           str_detect(name, "day")               ~ as.numeric(str_match(name, "(plt_day_)(.*)")[,3])
+         ),
+         type = str_match(name, "^([a-z]*)_")[,2]) %>% 
+  group_by(bleeding_y_n, name, day) %>% 
+  summarise(lab_median = median(value, na.rm= TRUE),
+            lab_sd = sd(value, na.rm= TRUE)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = day, y = lab_median, color= bleeding_y_n)) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin = lab_median - lab_sd, ymax = lab_median + lab_sd), width = 5)+
+  xlab("Days relative to infusion") + 
+  ylab("Median WBC") + 
+  theme_classic()
+
+
+
+
+
+
+
+LDH_long <- gather(LDH, day, LDH_value, `LDH at Pre-Leukapheresis`:`LDH day +30`)
+LDH_long$day[LDH_long$day=="LDH at Pre-Leukapheresis"] <- "Pre"
+LDH_long$day[LDH_long$day=="LDH day -5"] <- "Day -5"
+LDH_long$day[LDH_long$day=="LDH day 0"] <- "Day 0"
+LDH_long$day[LDH_long$day=="LDH day +7"] <- "Day 7"
+LDH_long$day[LDH_long$day=="LDH day +14"] <- "Day 14"
+LDH_long$day[LDH_long$day=="LDH day +21"] <- "Day 21"
+LDH_long$day[LDH_long$day=="LDH day +30"] <- "Day 30"
+LDH_long$day <- factor(LDH_long$day, levels = c("Pre", "Day -5", "Day 0", 
+                                                "Day 7", "Day 14", "Day 21", "Day 30"))
+```
 
 
 
