@@ -265,6 +265,7 @@ recoded_cart <- cart_MM %>%
       t_4_14_prior_to_car_t_infusion_1_0 == "No" &
       t_14_16_prior_to_car_t_infusion_1_0 == "No"    ~ "No"
   )) %>% 
+  # CRS and ICANS
   mutate(any_CRS = case_when(
     highest_gr_crs_grade_0_5 > 0       ~ "Yes",
     TRUE                               ~ "No"
@@ -281,20 +282,31 @@ recoded_cart <- cart_MM %>%
   mutate(ICANS_cat = case_when(
     highest_gr_icans_recorded_relative_to_infusion == 0 |
       highest_gr_icans_recorded_relative_to_infusion == 1              ~ "0-1",
-    highest_gr_crs_grade_0_5 >= 2                                      ~ "≥2"
+    highest_gr_icans_recorded_relative_to_infusion >= 2                ~ "≥2"
   )) %>% 
-
+  # Verified ORR
+  mutate(orr_response_d_30_verified = case_when(
+    str_detect(day_30_response_s_cr_cr_vgpr_pr_nr, "CR")   ~ "ORR",
+    str_detect(day_30_response_s_cr_cr_vgpr_pr_nr, "PR")   ~ "ORR",
+    is.na(day_30_response_s_cr_cr_vgpr_pr_nr)              ~ NA_character_,
+    TRUE                                                                        ~ "PD/SD/MR"
+  )) %>% 
+  mutate(orr_response_d_90_verified = case_when(
+    str_detect(day_90_response_s_cr_cr_vgpr_pr, "CR")   ~ "ORR",
+    str_detect(day_90_response_s_cr_cr_vgpr_pr, "PR")   ~ "ORR",
+    is.na(day_90_response_s_cr_cr_vgpr_pr)              ~ NA_character_,
+    TRUE                                                                        ~ "PD/SD/MR"
+  )) %>% 
   # Remove the < and > sign
   mutate(wo_sign = as.numeric(str_remove(ferritin_day_7, ">"))) %>% 
   mutate(ferritin_day_7 = case_when(
     str_detect(ferritin_day_7, ">")                 ~ max(wo_sign, na.rm = TRUE),
     TRUE                                            ~ as.numeric(ferritin_day_7)
     )) %>% 
-  
   mutate(wo_sign = as.numeric(str_remove(crp_pre_leukapheresis, "<"))) %>% 
   mutate(crp_pre_leukapheresis = case_when(
     str_detect(crp_pre_leukapheresis, "<")          ~ min(wo_sign, na.rm = TRUE),
-    TRUE                                            ~ as.numeric(crp_pre_leukapheresis) ####### coalesce
+    TRUE                                            ~ as.numeric(crp_pre_leukapheresis)
     )) %>% 
   mutate(wo_sign = as.numeric(str_remove(crp_day_10, "<"))) %>% 
   mutate(crp_day_10 = case_when(
@@ -338,7 +350,7 @@ recoded_cart <- cart_MM %>%
 recoded_cart %>% 
   select(
     age, sex,
-    platelet_at_time_of_bleeding_event_1,
+    plt_apheresis,
     ecog_at_screening,
     r_iss_at_car_t_infsion,
     extramedullary_disease_1_0,
@@ -348,11 +360,12 @@ recoded_cart %>%
     refractory_disease_status,
     ldh_at_pre_leukapheresis,
     b2_m_at_pre_leukapheresis,
-    marrow_dysplasia_baseline_percent,
+    marrow_cd138_baseline_percent,
     any_CRS, 
     any_ICANS,
     
     orr_response_at_d_30, orr_response_at_d_90,
+    orr_response_d_30_verified, orr_response_d_90_verified,
     history_of_bleeding_y_n,
     history_of_clotting_y_n,
     neurological_comorbidit_y_pre_car_t_1_0,
@@ -381,7 +394,7 @@ recoded_cart %>%
 recoded_cart %>% 
   select(
     age, sex,
-    platelet_at_time_of_bleeding_event_1,
+    plt_apheresis,
     ecog_at_screening,
     r_iss_at_car_t_infsion,
     extramedullary_disease_1_0,
@@ -391,11 +404,12 @@ recoded_cart %>%
     refractory_disease_status,
     ldh_at_pre_leukapheresis,
     b2_m_at_pre_leukapheresis,
-    marrow_dysplasia_baseline_percent,
+    marrow_cd138_baseline_percent,
     any_CRS, 
     any_ICANS,
     
     orr_response_at_d_30, orr_response_at_d_90,
+    orr_response_d_30_verified, orr_response_d_90_verified,
     history_of_bleeding_y_n,
     history_of_clotting_y_n,
     neurological_comorbidit_y_pre_car_t_1_0,
@@ -404,6 +418,15 @@ recoded_cart %>%
     thrombosis_events_post_car_t_y_n
   ) %>% 
   tbl_summary(by= thrombosis_events_post_car_t_y_n,
+              type = list(c(extramedullary_disease_1_0,
+                            any_cytogenetics, bridging_therapy_1_0,
+                            prior_auto_sct_1_0,
+                            orr_response_at_d_30, orr_response_at_d_90,
+                            history_of_bleeding_y_n, history_of_clotting_y_n,
+                            neurological_comorbidit_y_pre_car_t_1_0,
+                            vascular_comorbidity_dvt_stroke_ht0_cad_y_0,
+                            anticoagulation_preceding_car_t_y_n)
+                          ~ "categorical"),
               statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
               digits = all_continuous() ~ 1) %>% 
   bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
@@ -471,10 +494,10 @@ recoded_cart %>%
 
 
 # Figures: 
-## 1.	Cumulative incidence
+## Fig 1. Cumulative incidence
 
 ## Figure 2.
-```{r}
+```{r, fig.height=16, fig.width=12}
 # LDH <- 
   recoded_cart %>% 
   select(pt, bleeding_y_n,
@@ -492,36 +515,30 @@ recoded_cart %>%
   mutate(name = str_remove(name, "_k_ul|_k_u_l"),
          day = case_when(
            str_detect(name, "apheresis")         ~ -28,
-           str_detect(name, "day")               ~ as.numeric(str_match(name, "(plt_day_)(.*)")[,3])
+           str_detect(name, "pretreatment")         ~ -28,
+           str_detect(name, "day")               ~ as.numeric((str_match(name, "([0-9]+)"))[,2])
+         ), 
+         day = case_when(
+           day == 6     ~ -6,
+           TRUE               ~ day
          ),
-         type = str_match(name, "^([a-z]*)_")[,2]) %>% 
-  group_by(bleeding_y_n, name, day) %>% 
+         type = str_match(name, "^([a-z]*)_")[,2],
+         type = case_when(
+           type == "aptt"     ~ "ptt",
+           type == "monos"     ~ "mono",
+           TRUE               ~ type
+         )) %>% 
+  group_by(bleeding_y_n, type, day) %>% 
   summarise(lab_median = median(value, na.rm= TRUE),
             lab_sd = sd(value, na.rm= TRUE)) %>% 
   ungroup() %>% 
   ggplot(aes(x = day, y = lab_median, color= bleeding_y_n)) + 
   geom_line() + 
   geom_errorbar(aes(ymin = lab_median - lab_sd, ymax = lab_median + lab_sd), width = 5)+
-  xlab("Days relative to infusion") + 
-  ylab("Median WBC") + 
-  theme_classic()
-
-
-
-
-
-
-
-LDH_long <- gather(LDH, day, LDH_value, `LDH at Pre-Leukapheresis`:`LDH day +30`)
-LDH_long$day[LDH_long$day=="LDH at Pre-Leukapheresis"] <- "Pre"
-LDH_long$day[LDH_long$day=="LDH day -5"] <- "Day -5"
-LDH_long$day[LDH_long$day=="LDH day 0"] <- "Day 0"
-LDH_long$day[LDH_long$day=="LDH day +7"] <- "Day 7"
-LDH_long$day[LDH_long$day=="LDH day +14"] <- "Day 14"
-LDH_long$day[LDH_long$day=="LDH day +21"] <- "Day 21"
-LDH_long$day[LDH_long$day=="LDH day +30"] <- "Day 30"
-LDH_long$day <- factor(LDH_long$day, levels = c("Pre", "Day -5", "Day 0", 
-                                                "Day 7", "Day 14", "Day 21", "Day 30"))
+  xlab("Days relative to infusion") +
+  ylab("Median") +
+  theme_classic(base_size = 14)+
+  facet_wrap(type ~ ., scales = "free", ncol = 2)
 ```
 
 
