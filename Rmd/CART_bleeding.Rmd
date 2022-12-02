@@ -50,6 +50,7 @@ div.blue { background-color:#FF6600; border-radius: 5px; padding: 20px; font-siz
 
 ```{r library, include=FALSE}
 library(tidyverse)
+library(lubridate)
 library(gtsummary)
 theme_gtsummary_compact()
 theme_set(theme_classic())
@@ -58,7 +59,7 @@ theme_set(theme_classic())
 ```{r load}
 cart_MM <-
   readxl::read_xlsx(here::here(
-    "turabData Cleaning v13 11.18.2022.xlsx"),
+    "turabData Cleaning v15 12.1.2022.xlsx"),
     sheet = "Data - Original", na = "NA"
                     ) %>% 
   janitor::clean_names()
@@ -182,7 +183,11 @@ recoded_cart <- cart_MM %>%
   mutate(bleeding_y_n = case_when(
     bleeding_y_n == 1             ~ "Yes",
     bleeding_y_n == 0             ~ "No"
-  )) %>% 
+  ), bleeding_y_n = factor(bleeding_y_n, levels = c("No", "Yes"))) %>% 
+  mutate(thrombosis_events_post_car_t_y_n = case_when(
+    thrombosis_events_post_car_t_y_n == 1             ~ "Yes",
+    thrombosis_events_post_car_t_y_n == 0             ~ "No"
+  ), thrombosis_events_post_car_t_y_n = factor(thrombosis_events_post_car_t_y_n, levels = c("No", "Yes"))) %>% 
   # mutate(who_grade_of_bleeding_259 = case_when(
   #   who_grade_of_bleeding_259 == 1             ~ "Petechia, purpura, oropharyngeal bleed, epistaxis <1 hr, vaginal bleed <2 pads/dat",
   #   who_grade_of_bleeding_259 == 2             ~ "Echymosis >10 cms, Hematoma, retinal hemorrhage without vision impairment,hematuria, hemotysis,melena, joint bleed",
@@ -283,7 +288,7 @@ recoded_cart <- cart_MM %>%
     highest_gr_icans_recorded_relative_to_infusion == 0 |
       highest_gr_icans_recorded_relative_to_infusion == 1              ~ "0-1",
     highest_gr_icans_recorded_relative_to_infusion >= 2                ~ "≥2"
-  )) %>% 
+  ), ICANS_cat = factor(ICANS_cat, levels = c("0-1", "≥2"))) %>% 
   # Verified ORR
   mutate(orr_response_d_30_verified = case_when(
     str_detect(day_30_response_s_cr_cr_vgpr_pr_nr, "CR")   ~ "ORR",
@@ -358,9 +363,37 @@ recoded_cart <- cart_MM %>%
   mutate(triple_refractory = case_when(
     refractory_disease_status == "Triple"     ~ "Yes",
     TRUE                                      ~ "No"
-  ))
+  )) %>% 
+  mutate(date_of_progression_documentation_if_any = case_when(
+    str_detect(date_of_progression_documentation_if_any,
+               "None|not")                                    ~ NA_character_,
+    TRUE                                                      ~ date_of_progression_documentation_if_any
+  ), 
+  date_of_progression_documentation_if_any = 
+    as.Date(as.numeric(date_of_progression_documentation_if_any),
+                                             origin = "1899-12-30")
+  ) %>% 
+  mutate(evaluable_90days = case_when(
+    date_of_death <= (date_of_car_t_infusion_69 + days(95))   ~ "PD=death",
+    Sys.Date() <= (date_of_car_t_infusion_69 + days(95))      ~ "not evaluable",
 
+    is.na(orr_response_d_90_verified) &
+      Sys.Date() > (date_of_car_t_infusion_69 + days(95))     ~ "missing"
+  )) %>%
+  mutate(orr_response_d_90_verified = case_when(
+    !is.na(orr_response_d_90_verified)                        ~ orr_response_d_90_verified,
+    evaluable_90days == "PD=death"                            ~ "PD/SD/MR",
+    evaluable_90days == "not evaluable"                       ~ NA_character_,
+    orr_response_d_30_verified == "PD/SD/MR"                  ~ "PD/SD/MR",
+    !is.na(date_of_progression_documentation_if_any)          ~ "PD/SD/MR",
+    is.na(orr_response_d_90_verified)                         ~ "PD/SD/MR"
+  )) %>%
+  mutate(time30 = date_of_car_t_infusion_69 + days(95))
 
+a <- recoded_cart %>%
+  select(pt, mrn, date_of_car_t_infusion_69, evaluable_90days,
+         date_of_death, date_of_progression_documentation_if_any,
+         orr_response_d_90_verified)
 ```
 
 # Table 1. summarizing the baseline characteristics of the patients reviewed in the study
@@ -384,8 +417,42 @@ recoded_cart %>%
     any_CRS, 
     any_ICANS,
     
-    orr_response_at_d_30, orr_response_at_d_90,
-    orr_response_d_30_verified, orr_response_d_90_verified,
+    # orr_response_at_d_30, orr_response_at_d_90,
+    orr_response_d_30_verified, 
+    bleeding_y_n
+  ) %>% 
+  tbl_summary(by= bleeding_y_n,
+              type = list(c(extramedullary_disease_1_0,
+                            any_cytogenetics, bridging_therapy_1_0,
+                            prior_auto_sct_1_0,
+                            penta_refractory, double_refractory, triple_refractory,
+                            any_CRS, any_ICANS)
+                          ~ "categorical"),
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
+
+recoded_cart %>% 
+  filter(evaluable_90days != "not evaluable" | is.na(evaluable_90days)) %>% 
+  select(
+    orr_response_d_90_verified,
+    bleeding_y_n
+  ) %>% 
+  tbl_summary(by= bleeding_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
+
+recoded_cart %>% 
+  select(
     history_of_bleeding_y_n,
     history_of_clotting_y_n,
     neurological_comorbidit_y_pre_car_t_1_0,
@@ -394,13 +461,7 @@ recoded_cart %>%
     bleeding_y_n
   ) %>% 
   tbl_summary(by= bleeding_y_n,
-              type = list(c(extramedullary_disease_1_0,
-                            any_cytogenetics, bridging_therapy_1_0,
-                            prior_auto_sct_1_0,
-                            penta_refractory, double_refractory, triple_refractory,
-                            any_CRS, any_ICANS,
-                            orr_response_at_d_30, orr_response_at_d_90,
-                            history_of_bleeding_y_n, history_of_clotting_y_n,
+              type = list(c(history_of_bleeding_y_n, history_of_clotting_y_n,
                             neurological_comorbidit_y_pre_car_t_1_0,
                             vascular_comorbidity_dvt_stroke_ht0_cad_y_0,
                             anticoagulation_preceding_car_t_y_n)
@@ -413,6 +474,10 @@ recoded_cart %>%
   modify_footnote(update = everything() ~ NA) %>%
   modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
 
+```
+
+
+```{r}
 recoded_cart %>% 
   select(
     age, sex,
@@ -432,8 +497,41 @@ recoded_cart %>%
     any_CRS, 
     any_ICANS,
     
-    orr_response_at_d_30, orr_response_at_d_90,
-    orr_response_d_30_verified, orr_response_d_90_verified,
+    # orr_response_at_d_30, orr_response_at_d_90,
+    orr_response_d_30_verified, 
+    thrombosis_events_post_car_t_y_n
+  ) %>% 
+  tbl_summary(by= thrombosis_events_post_car_t_y_n,
+              type = list(c(extramedullary_disease_1_0,
+                            any_cytogenetics, bridging_therapy_1_0,
+                            prior_auto_sct_1_0,
+                            penta_refractory, double_refractory, triple_refractory,
+                            any_CRS, any_ICANS)
+                          ~ "categorical"),
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Thrombosis event**")
+
+recoded_cart %>% 
+  select(
+    orr_response_d_90_verified,
+    thrombosis_events_post_car_t_y_n
+  ) %>% 
+  tbl_summary(by= thrombosis_events_post_car_t_y_n,
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1) %>% 
+  bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
+  add_overall() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA) %>%
+  modify_spanning_header(all_stat_cols() ~ "**Thrombosis event**")
+
+recoded_cart %>% 
+  select(
     history_of_bleeding_y_n,
     history_of_clotting_y_n,
     neurological_comorbidit_y_pre_car_t_1_0,
@@ -442,13 +540,7 @@ recoded_cart %>%
     thrombosis_events_post_car_t_y_n
   ) %>% 
   tbl_summary(by= thrombosis_events_post_car_t_y_n,
-              type = list(c(extramedullary_disease_1_0,
-                            any_cytogenetics, bridging_therapy_1_0,
-                            prior_auto_sct_1_0,
-                            penta_refractory, double_refractory, triple_refractory,
-                            any_CRS, any_ICANS,
-                            orr_response_at_d_30, orr_response_at_d_90,
-                            history_of_bleeding_y_n, history_of_clotting_y_n,
+              type = list(c(history_of_bleeding_y_n, history_of_clotting_y_n,
                             neurological_comorbidit_y_pre_car_t_1_0,
                             vascular_comorbidity_dvt_stroke_ht0_cad_y_0,
                             anticoagulation_preceding_car_t_y_n)
@@ -559,18 +651,28 @@ library(ggsurvfit)
 recoded_cart2 <- recoded_cart %>% 
   mutate(event_type = case_when(
     bleeding_y_n == "Yes" &
-      thrombosis_events_post_car_t_y_n == 1     ~ "Bleeding+Thrombosis",
+      thrombosis_events_post_car_t_y_n == "Yes"     ~ "Bleeding+Thrombosis",
     bleeding_y_n == "Yes"       ~ "Bleeding",
-    thrombosis_events_post_car_t_y_n == 1     ~ "Thrombosis",
+    thrombosis_events_post_car_t_y_n == "Yes"     ~ "Thrombosis",
     TRUE   ~ "None"
   )) %>% 
   mutate(event = case_when(
     bleeding_y_n == "Yes" |
-      thrombosis_events_post_car_t_y_n == 1     ~ "Yes",
+      thrombosis_events_post_car_t_y_n == "Yes"     ~ "Yes",
     TRUE ~ "No"
   )) %>% 
   mutate(event_type =
-           factor(event_type, levels= c("None","Bleeding","Thrombosis"))) %>% 
+           factor(event_type, levels= c("None","Bleeding","Thrombosis"))) %>%
+  mutate(event_type1 = case_when(
+    event_type == "None"            ~ 0,
+    event_type == "Bleeding"            ~ 1,
+    event_type == "Thrombosis"            ~ 1
+  )) %>% 
+  mutate(event_type2 = case_when(
+    event_type == "Bleeding"       ~ "Bleeding",
+    event_type == "Thrombosis"     ~ "Thrombosis",
+    TRUE   ~ NA_character_
+  )) %>% 
   mutate(date_of_event = coalesce(
     no_of_days_after_car_t_bleeding_event, 
     onset_of_first_thrombotic_event_how_many_days_after_car_t_cell_rx, days_to_death_from_most_recent_cart_infusion),
@@ -578,7 +680,7 @@ recoded_cart2 <- recoded_cart %>%
       is.na(date_of_event)   ~ 300,
       TRUE     ~ date_of_event))
 
-cuminc(Surv(date_of_event, event_type) ~ 1, data = recoded_cart2) %>% 
+cum_inc <- cuminc(Surv(date_of_event, event_type) ~ 1, data = recoded_cart2) %>% 
   ggcuminc(outcome = c("Bleeding", "Thrombosis"), 
            geom_step(linewidth=10)) +
   ylim(c(0, 1)) + 
@@ -586,6 +688,115 @@ cuminc(Surv(date_of_event, event_type) ~ 1, data = recoded_cart2) %>%
     x = "Days"
   )+
   add_risktable()
+cum_inc
+
+cuminc(Surv(date_of_event, event_type) ~ 1, data = recoded_cart2) %>% 
+  ggcuminc(outcome = c("Bleeding", "Thrombosis"), 
+           geom_step(linewidth=10)) +
+  ylim(c(0, 0.25)) +
+  labs(
+    x = "Days"
+  )+
+  add_risktable()
+
+library(survminer)
+library(survival)
+
+# fit <- survfit2( Surv(date_of_event, event_type) ~ 1, 
+#                 data = recoded_cart2 )
+# 
+# ggsurvplot(fit, data = recoded_cart2,
+#   fun = "cumhaz")
+
+survfit2( Surv(date_of_event, event_type) ~ 1,
+                data = recoded_cart2 ) %>%
+  tidy_survfit() %>%
+  ggplot(aes(x=time, y=estimate, color= outcome))+
+  geom_step() +
+  scale_color_manual(values=c("red", "blue"))+
+  labs(
+    x= "Days", y= "Cumulative incidence"
+  )+
+  ylim(c(0, 0.25))+
+  theme(legend.position='bottom',
+        legend.title = element_blank())
+
+survfit2( Surv(date_of_event, event_type) ~ 1,
+                data = recoded_cart2 ) %>%
+  tidy_survfit() %>%
+  ggplot(aes(x=time, y=estimate, color= outcome))+
+  geom_step() +
+  scale_color_manual(values=c("red", "blue"))+
+  labs(
+    x= "Days", y= "Cumulative incidence"
+  )+
+  ylim(c(0, 0.25))+
+  theme_minimal()+
+  theme(legend.position='bottom',
+        legend.title = element_blank())
+
+# Table
+recoded_cart %>% 
+  select(
+    bleeding_events_type_gib_hematuria_sdh_ich_ssi_hemoptysis
+  ) %>% 
+  tbl_summary(
+              statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
+              digits = all_continuous() ~ 1,
+              missing = "no") %>% 
+  bold_labels() %>% 
+  add_stat_label() %>% 
+  modify_footnote(update = everything() ~ NA)
+
+# 
+# 
+# fit<- survfit(Surv(time = recoded_cart2$date_of_event,
+#              event = recoded_cart2$event_type1) ~ 
+#           1,
+#         data =  recoded_cart2)
+# 
+# # Survival tables
+# #:::::::::::::::::::::::::::::::::::::::::::::::
+# tables <- ggsurvtable(fit, data = recoded_cart2, color = "strata",
+#   y.text = FALSE)
+# 
+# # Risk table
+# tables$risk.table
+# ggsurvtable(fit, 
+#             survtable = "risk.table",
+#             risk.table.type = "nrisk_cumevents",
+#             data = recoded_cart2, color = "strata",
+#   y.text = FALSE)
+# 
+# survfit(Surv(time = recoded_cart2$date_of_event,
+#              event = recoded_cart2$event_type1) ~ 
+#           1,
+#         data =  recoded_cart2)
+# myplot <- ggsurvplot(
+#   survfit(Surv(time = recoded_cart2$date_of_event,
+#              event = recoded_cart2$event_type1) ~ 
+#           event_type2,
+#         data =  recoded_cart2), 
+#   
+#   data= recoded_cart2,
+#         fun = "event",
+#   legend.title = "",
+#   legend.labs = c("Bleeding", "Thrombosis"),
+#   palette = c("red", "blue"),
+#   risk.table = TRUE,
+#   tables.col = "strata",
+#   # break.time.by = 3,
+#   cumevents = TRUE
+#         )
+# myplot
+# myplot$table
+# myplot$cumevents
+#myplot$table <- myplot$table + 
+#  scale_x_continuous(breaks = c(0, 3, 6, 9, 12))
+
+
+
+
 # event_fit <-
 #  cmprsk::cuminc(
 #     ftime = cart_MM$no_of_days_after_car_t_bleeding_event,
@@ -694,18 +905,17 @@ cuminc(Surv(date_of_event, event_type) ~ 1, data = recoded_cart2) %>%
 ```
 
 ## Figure 2.
-```{r, fig.height=16, fig.width=12}
+```{r, fig.height=16, fig.width=16}
 recoded_cart %>% 
   select(pt, bleeding_y_n,
          plt_apheresis, starts_with("plt_day"),
          starts_with("mono"), 
          ferritin_at_pre_leukapheresis, starts_with("ferritin_day"), 
          crp_pre_leukapheresis, starts_with("crp_day"), 
-         ldh_at_pre_leukapheresis, starts_with("ldh_day"), 
-         aptt_pretreatment,
-         starts_with("ptt_s_day"), 
-         pt_pretreatment, pt_s_day_0, starts_with("pt_day"), 
-         inr_pretreatment
+         # ldh_at_pre_leukapheresis, starts_with("ldh_day"), 
+         aptt_pretreatment, starts_with("ptt_s_day"), 
+         pt_pretreatment, pt_s_day_0, starts_with("pt_day")#, 
+         # inr_pretreatment
          ) %>% 
   pivot_longer(cols = -c(pt, bleeding_y_n)) %>% 
   mutate(name = str_remove(name, "_k_ul|_k_u_l"),
@@ -732,15 +942,134 @@ recoded_cart %>%
   geom_line() + 
   geom_errorbar(aes(ymin = lab_median - lab_sd, ymax = lab_median + lab_sd), width = 5)+
   xlab("Days relative to infusion") +
-  ylab("Median") +
+  ylab("Median - SD") +
   theme_classic(base_size = 14)+
+  scale_color_discrete(name="Bleeding")+
+  scale_x_continuous(
+    breaks = c(-28, -6, 0, 7, 10, 14, 21, 30, 60, 90),
+    labels = c("Apheresis","-6", "0", "7", "10", "14", "21", "30", "60", "90")
+  )+
+  theme(legend.position= "bottom")+
+  facet_wrap(type ~ ., scales = "free", ncol = 2)
+
+recoded_cart %>% 
+  select(pt, thrombosis_events_post_car_t_y_n,
+         plt_apheresis, starts_with("plt_day"),
+         starts_with("mono"), 
+         ferritin_at_pre_leukapheresis, starts_with("ferritin_day"), 
+         crp_pre_leukapheresis, starts_with("crp_day"), 
+         # ldh_at_pre_leukapheresis, starts_with("ldh_day"), 
+         aptt_pretreatment, starts_with("ptt_s_day"), 
+         pt_pretreatment, pt_s_day_0, starts_with("pt_day")#, 
+         # inr_pretreatment
+         ) %>% 
+  pivot_longer(cols = -c(pt, thrombosis_events_post_car_t_y_n)) %>% 
+  mutate(name = str_remove(name, "_k_ul|_k_u_l"),
+         day = case_when(
+           str_detect(name, "apheresis")         ~ -28,
+           str_detect(name, "pretreatment")         ~ -28,
+           str_detect(name, "day")               ~ as.numeric((str_match(name, "([0-9]+)"))[,2])
+         ), 
+         day = case_when(
+           day == 6     ~ -6,
+           TRUE               ~ day
+         ),
+         type = str_match(name, "^([a-z]*)_")[,2],
+         type = case_when(
+           type == "aptt"     ~ "ptt",
+           type == "monos"     ~ "mono",
+           TRUE               ~ type
+         )) %>% 
+  group_by(thrombosis_events_post_car_t_y_n, type, day) %>% 
+  summarise(lab_median = median(value, na.rm= TRUE),
+            lab_sd = sd(value, na.rm= TRUE)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = day, y = lab_median, color= thrombosis_events_post_car_t_y_n)) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin = lab_median - lab_sd, ymax = lab_median + lab_sd), width = 5)+
+  xlab("Days relative to infusion") +
+  ylab("Median - SD") +
+  theme_classic(base_size = 14)+
+  scale_color_discrete(name="Thrombosis")+
+  scale_x_continuous(
+    breaks = c(-28, -6, 0, 7, 10, 14, 21, 30, 60, 90),
+    labels = c("Apheresis","-6", "0", "7", "10", "14", "21", "30", "60", "90")
+  )+
+  theme(legend.position= "bottom")+
+  facet_wrap(type ~ ., scales = "free", ncol = 2)
+
+recoded_cart %>% 
+  select(pt, ICANS_cat,
+         plt_apheresis, starts_with("plt_day"),
+         starts_with("mono"), 
+         ferritin_at_pre_leukapheresis, starts_with("ferritin_day"), 
+         crp_pre_leukapheresis, starts_with("crp_day"), 
+         # ldh_at_pre_leukapheresis, starts_with("ldh_day"), 
+         aptt_pretreatment, starts_with("ptt_s_day"), 
+         pt_pretreatment, pt_s_day_0, starts_with("pt_day")#, 
+         # inr_pretreatment
+         ) %>% 
+  pivot_longer(cols = -c(pt, ICANS_cat)) %>% 
+  mutate(name = str_remove(name, "_k_ul|_k_u_l"),
+         day = case_when(
+           str_detect(name, "apheresis")         ~ -28,
+           str_detect(name, "pretreatment")         ~ -28,
+           str_detect(name, "day")               ~ as.numeric((str_match(name, "([0-9]+)"))[,2])
+         ), 
+         day = case_when(
+           day == 6     ~ -6,
+           TRUE               ~ day
+         ),
+         type = str_match(name, "^([a-z]*)_")[,2],
+         type = case_when(
+           type == "aptt"     ~ "ptt",
+           type == "monos"     ~ "mono",
+           TRUE               ~ type
+         )) %>% 
+  group_by(ICANS_cat, type, day) %>% 
+  summarise(lab_median = median(value, na.rm= TRUE),
+            lab_sd = sd(value, na.rm= TRUE)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = day, y = lab_median, color= ICANS_cat)) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin = lab_median - lab_sd, ymax = lab_median + lab_sd), width = 5)+
+  xlab("Days relative to infusion") +
+  ylab("Median - SD") +
+  theme_classic(base_size = 14)+
+  scale_color_discrete(name="ICANS")+
+  scale_x_continuous(
+    breaks = c(-28, -6, 0, 7, 10, 14, 21, 30, 60, 90),
+    labels = c("Apheresis","-6", "0", "7", "10", "14", "21", "30", "60", "90")
+  )+
+  theme(legend.position= "bottom")+
   facet_wrap(type ~ ., scales = "free", ncol = 2)
 ```
 
 
 # MVA
-```{r}
+```{r prep MVA}
+# recoded_cart3 <- recoded_cart %>% 
+#   mutate(bleeding_y_n = case_when(
+#     bleeding_y_n == "No"    ~ 0,
+#     bleeding_y_n == "Yes"   ~ 1
+#   )) %>% 
+#   mutate(r_iss_at_car_t_infsion = case_when(
+#     r_iss_at_car_t_infsion == "I" |
+#     r_iss_at_car_t_infsion == "II"           ~ "I-II",
+#     TRUE                 ~ r_iss_at_car_t_infsion
+#   ))
+```
 
+
+```{r glm}
+# glm(bleeding_y_n ~ plt_apheresis + r_iss_at_car_t_infsion + ldh_at_pre_leukapheresis + history_of_bleeding_y_n,
+#     data = recoded_cart3,
+#     family = "binomial") %>%
+#   tbl_regression(exponentiate = TRUE, 
+#                  intercept = TRUE) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>%
+#   modify_spanning_header(everything() ~ "**bleeding_y_n**") %>%
+#   bold_p(t = .05) 
 ```
 
 
