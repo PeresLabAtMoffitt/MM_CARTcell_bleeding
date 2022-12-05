@@ -437,7 +437,7 @@ recoded_cart %>%
   modify_spanning_header(all_stat_cols() ~ "**Bleeding event**")
 
 recoded_cart %>% 
-  filter(evaluable_90days != "not evaluable" | is.na(evaluable_90days)) %>% 
+  # filter(evaluable_90days != "not evaluable" | is.na(evaluable_90days)) %>% 
   select(
     orr_response_d_90_verified,
     bleeding_y_n
@@ -517,6 +517,7 @@ recoded_cart %>%
   modify_spanning_header(all_stat_cols() ~ "**Thrombosis event**")
 
 recoded_cart %>% 
+  # filter(evaluable_90days != "not evaluable" | is.na(evaluable_90days)) %>% 
   select(
     orr_response_d_90_verified,
     thrombosis_events_post_car_t_y_n
