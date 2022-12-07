@@ -1047,31 +1047,34 @@ recoded_cart %>%
 ```
 
 
-# MVA
-```{r prep MVA}
-# recoded_cart3 <- recoded_cart %>% 
-#   mutate(bleeding_y_n = case_when(
-#     bleeding_y_n == "No"    ~ 0,
-#     bleeding_y_n == "Yes"   ~ 1
-#   )) %>% 
-#   mutate(r_iss_at_car_t_infsion = case_when(
-#     r_iss_at_car_t_infsion == "I" |
-#     r_iss_at_car_t_infsion == "II"           ~ "I-II",
-#     TRUE                 ~ r_iss_at_car_t_infsion
-#   ))
-```
+<!-- # UVA -->
+<!-- ```{r prep MVA} -->
+<!-- recoded_cart3 <- recoded_cart %>% -->
+<!--   mutate(bleeding_y_n = case_when( -->
+<!--     bleeding_y_n == "No"    ~ 0, -->
+<!--     bleeding_y_n == "Yes"   ~ 1 -->
+<!--   )) %>% -->
+<!--   mutate(r_iss_at_car_t_infsion = case_when( -->
+<!--     r_iss_at_car_t_infsion == "I" | -->
+<!--     r_iss_at_car_t_infsion == "II"           ~ "I-II", -->
+<!--     TRUE                 ~ r_iss_at_car_t_infsion -->
+<!--   )) -->
+<!-- ``` -->
 
 
-```{r glm}
-# glm(bleeding_y_n ~ plt_apheresis + r_iss_at_car_t_infsion + ldh_at_pre_leukapheresis + history_of_bleeding_y_n,
-#     data = recoded_cart3,
-#     family = "binomial") %>%
-#   tbl_regression(exponentiate = TRUE, 
-#                  intercept = TRUE) %>%
-#   add_nevent(location = "level") %>% add_n(location = "level") %>%
-#   modify_spanning_header(everything() ~ "**bleeding_y_n**") %>%
-#   bold_p(t = .05) 
-```
+<!-- ```{r glm} -->
+<!-- tbl_uvregression(recoded_cart3[c("plt_apheresis", "r_iss_at_car_t_infsion",  -->
+<!--                                  "ldh_at_pre_leukapheresis",  "history_of_bleeding_y_n", -->
+<!--                                  "highest_gr_crs_grade_0_5", "ICANS_cat", -->
+<!--                                  "bleeding_y_n")], -->
+<!--                    method = glm,  -->
+<!--                    y = bleeding_y_n, -->
+<!--                    method.args = list(family = binomial), -->
+<!--                    exponentiate = TRUE) %>% -->
+<!--   add_nevent(location = "level") %>% add_n(location = "level") %>% -->
+<!--   modify_spanning_header(everything() ~ "**bleeding_y_n**") %>% -->
+<!--   bold_p(t = .05) -->
+<!-- ``` -->
 
 
 
