@@ -296,11 +296,21 @@ recoded_cart <- cart_MM %>%
     is.na(day_30_response_s_cr_cr_vgpr_pr_nr)              ~ NA_character_,
     TRUE                                                                        ~ "PD/SD/MR"
   )) %>% 
+  mutate(CR_response_d_30 = case_when(
+    str_detect(day_30_response_s_cr_cr_vgpr_pr_nr, "CR")   ~ "≥ CR",
+    is.na(day_30_response_s_cr_cr_vgpr_pr_nr)              ~ NA_character_,
+    TRUE                                                   ~ "< CR"
+  )) %>% 
   mutate(orr_response_d_90_verified = case_when(
     str_detect(day_90_response_s_cr_cr_vgpr_pr, "CR")   ~ "ORR",
     str_detect(day_90_response_s_cr_cr_vgpr_pr, "PR")   ~ "ORR",
     is.na(day_90_response_s_cr_cr_vgpr_pr)              ~ NA_character_,
     TRUE                                                                        ~ "PD/SD/MR"
+  )) %>% 
+  mutate(CR_response_d_90 = case_when(
+    str_detect(day_90_response_s_cr_cr_vgpr_pr, "CR")   ~ "≥ CR",
+    is.na(day_90_response_s_cr_cr_vgpr_pr)              ~ NA_character_,
+    TRUE                                                ~ "< CR"
   )) %>% 
   # Remove the < and > sign
   mutate(wo_sign = as.numeric(str_remove(ferritin_day_7, ">"))) %>% 
@@ -388,12 +398,14 @@ recoded_cart <- cart_MM %>%
     !is.na(date_of_progression_documentation_if_any)          ~ "PD/SD/MR",
     is.na(orr_response_d_90_verified)                         ~ "PD/SD/MR"
   )) %>%
-  mutate(time30 = date_of_car_t_infusion_69 + days(95))
-
-a <- recoded_cart %>%
-  select(pt, mrn, date_of_car_t_infusion_69, evaluable_90days,
-         date_of_death, date_of_progression_documentation_if_any,
-         orr_response_d_90_verified)
+  mutate(CR_response_d_90 = case_when(
+    !is.na(CR_response_d_90)                                  ~ CR_response_d_90,
+    evaluable_90days == "PD=death"                            ~ "< CR",
+    evaluable_90days == "not evaluable"                       ~ NA_character_,
+    orr_response_d_30_verified == "PD/SD/MR"                  ~ "< CR",
+    !is.na(date_of_progression_documentation_if_any)          ~ "< CR",
+    is.na(CR_response_d_90)                         ~ "< CR"
+  )) 
 ```
 
 # Table 1. summarizing the baseline characteristics of the patients reviewed in the study
@@ -419,6 +431,10 @@ recoded_cart %>%
     
     # orr_response_at_d_30, orr_response_at_d_90,
     orr_response_d_30_verified, 
+    CR_response_d_30,
+    days_at_bleeding_post_cart,
+    number_of_dvt,
+    no_of_days_post_cart_at_time_of_stroke_arterial_clot,
     bleeding_y_n
   ) %>% 
   tbl_summary(by= bleeding_y_n,
@@ -427,7 +443,9 @@ recoded_cart %>%
                             prior_auto_sct_1_0,
                             penta_refractory, double_refractory, triple_refractory,
                             any_CRS, any_ICANS)
-                          ~ "categorical"),
+                          ~ "categorical", 
+                          c(days_at_bleeding_post_cart, no_of_days_post_cart_at_time_of_stroke_arterial_clot)
+                          ~ "continuous"),
               statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
               digits = all_continuous() ~ 1) %>% 
   bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
@@ -440,6 +458,7 @@ recoded_cart %>%
   # filter(evaluable_90days != "not evaluable" | is.na(evaluable_90days)) %>% 
   select(
     orr_response_d_90_verified,
+    CR_response_d_90,
     bleeding_y_n
   ) %>% 
   tbl_summary(by= bleeding_y_n,
@@ -499,6 +518,10 @@ recoded_cart %>%
     
     # orr_response_at_d_30, orr_response_at_d_90,
     orr_response_d_30_verified, 
+    CR_response_d_30,
+    days_at_bleeding_post_cart,
+    number_of_dvt,
+    no_of_days_post_cart_at_time_of_stroke_arterial_clot,
     thrombosis_events_post_car_t_y_n
   ) %>% 
   tbl_summary(by= thrombosis_events_post_car_t_y_n,
@@ -507,7 +530,9 @@ recoded_cart %>%
                             prior_auto_sct_1_0,
                             penta_refractory, double_refractory, triple_refractory,
                             any_CRS, any_ICANS)
-                          ~ "categorical"),
+                          ~ "categorical", 
+                          c(days_at_bleeding_post_cart, no_of_days_post_cart_at_time_of_stroke_arterial_clot)
+                          ~ "continuous"),
               statistic = list(all_continuous() ~ "{median} ({min}, {max})"), 
               digits = all_continuous() ~ 1) %>% 
   bold_labels() %>% add_p() %>% bold_p(t= .05) %>% 
@@ -520,6 +545,7 @@ recoded_cart %>%
   # filter(evaluable_90days != "not evaluable" | is.na(evaluable_90days)) %>% 
   select(
     orr_response_d_90_verified,
+    CR_response_d_90,
     thrombosis_events_post_car_t_y_n
   ) %>% 
   tbl_summary(by= thrombosis_events_post_car_t_y_n,
@@ -600,10 +626,12 @@ recoded_cart %>%
     inr_pretreatment,
     lower_platelet_nadir_x_1000_u_l,
     ferritin_at_pre_leukapheresis,
+    ferritin_pre_infusion = ferritin_day_6,
     ferritin_peak_ng_ml,
     crp_pre_leukapheresis,
+    crp_pre_infusion = crp_day_6,
     crp_peak_ng_ml,
-    
+    ldh_pre_infusion = ldh_day_6,
     bleeding_y_n
   ) %>% 
   tbl_summary(by= bleeding_y_n,
@@ -624,9 +652,12 @@ recoded_cart %>%
     inr_pretreatment,
     lower_platelet_nadir_x_1000_u_l,
     ferritin_at_pre_leukapheresis,
+    ferritin_pre_infusion = ferritin_day_6,
     ferritin_peak_ng_ml,
     crp_pre_leukapheresis,
+    crp_pre_infusion = crp_day_6,
     crp_peak_ng_ml,
+    ldh_pre_infusion = ldh_day_6,
     
     thrombosis_events_post_car_t_y_n
   ) %>% 
